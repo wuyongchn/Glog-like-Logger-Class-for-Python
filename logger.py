@@ -96,6 +96,7 @@ class Logger(object):
         self._logger.setLevel(logging.INFO)
 
     def set_level(self, new_level):
+        self._logger.setLevel()
         self._logger.setLevel(new_level)
         self._logger.debug('Log level set to %s', new_level)
 
@@ -129,39 +130,45 @@ class Logger(object):
             raise
 
     @staticmethod
-    def _get_args(string):
+    def _get_args(string, tag):
         def _delete_pre_and_last_blank(_arg):
             while _arg[0] == ' ':
                 _arg = _arg[1:]
             while _arg[-1] == ' ':
                 _arg = _arg[:-1]
             return _arg
-        counter = string.count(',')
-        if counter < 1:
-            assert False
+
         start_idx = string.find('(')
-        end_idx = string.find(',')
-        if counter == 1:
-            arg = _delete_pre_and_last_blank(string[start_idx+1:end_idx])
-        elif counter == 2:
-            arg1 = _delete_pre_and_last_blank(string[start_idx+1:end_idx])
-            start_idx = end_idx + 1
-            end_idx = string.find(',', start_idx)
-            arg2 = _delete_pre_and_last_blank(string[start_idx+1:end_idx])
-            arg = (arg1, arg2)
+        if tag is None:
+            end_idx = string.rfind(')')
         else:
-            assert False
+            end_idx = string.rfind(',', 0, string.find(tag))
+        arg = string[start_idx+1:end_idx]
+        comma_idx = arg.find(',')
+        if comma_idx == -1:
+            arg = _delete_pre_and_last_blank(arg)
+        else:
+            arg1 = _delete_pre_and_last_blank(arg[:comma_idx])
+            arg2 = _delete_pre_and_last_blank(arg[comma_idx+1:])
+            arg = (arg1, arg2)
         return arg
 
     def _check_failed(self, msg):
         stack = traceback.extract_stack()
         stack = stack[0:-2]
         filename, lineno, _, args = stack[-1]
-        arg = self._get_args(args)
+        arg = self._get_args(args, msg[-1])
         if isinstance(arg, str):
-            msg = msg[0] + arg + ' ' + msg[-1]
+            if msg[-1] is None:
+                msg = msg[0] + arg
+            else:
+                msg = msg[0] + arg + ' ' + msg[1]
         else:
-            msg = msg[0] + arg[0] + msg[1] + arg[1] + msg[2]
+            if msg[-1] is None:
+                msg = msg[0] + arg[0] + msg[1] + arg[1] + msg[2]
+            else:
+                msg = msg[0] + arg[0] + msg[1] + arg[1] + msg[2] + msg[3]
+
         try:
             raise self.FailedCheckException(msg)
         except self.FailedCheckException:
@@ -179,37 +186,37 @@ class Logger(object):
     def check_eq(self, obj1, obj2, msg=None):
         """Raise exception with message if object1 != object2."""
         if obj1 != obj2:
-            msg = ('Check failed: ', ' == ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ' + msg)
+            msg = ('Check failed: ', ' == ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ', msg)
             self._check_failed(msg)
 
     def check_ne(self, obj1, obj2, msg=None):
         """Raise exception with message if obj1 == obj2."""
         if obj1 == obj2:
-            msg = ('Check failed: ', ' != ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ' + msg)
+            msg = ('Check failed: ', ' != ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ', msg)
             self._check_failed(msg)
 
     def check_le(self, obj1, obj2, msg=None):
         """Raise exception with message if not (obj1 <= obj2.)"""
         if obj1 > obj2:
-            msg = ('Check failed: ', ' <= ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ' + msg)
+            msg = ('Check failed: ', ' <= ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ', msg)
             self._check_failed(msg)
 
     def check_ge(self, obj1, obj2, msg=None):
         """Raise exception with message if not (obj1 >= obj2.)"""
         if obj1 < obj2:
-            msg = ('Check failed: ', ' >= ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ' + msg)
+            msg = ('Check failed: ', ' >= ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ', msg)
             self._check_failed(msg)
 
     def check_lt(self, obj1, obj2, msg=None):
         """Raise exception with message if not (obj1 < obj2.)"""
         if obj1 >= obj2:
-            msg = ('Check failed: ', ' < ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ' + msg)
+            msg = ('Check failed: ', ' < ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ', msg)
             self._check_failed(msg)
 
     def check_gt(self, obj1, obj2, msg=None):
         """Raise exception with message if not (obj1 > obj2.)"""
         if obj1 <= obj2:
-            msg = ('Check failed: ', ' > ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ' + msg)
+            msg = ('Check failed: ', ' > ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ', msg)
             self._check_failed(msg)
 
 
@@ -219,11 +226,17 @@ if __name__ == '__main__':
     log.info('this is log info')
     log.warning('this is log info')
     log.error('this is log info')
-    log.fatal('this is log info')
+    # log.fatal('this is log info')
 
     a = 1; b = 2
+    log.check(type(a)==float)
+
+    log.check(type(a)==float, "this's ts")
+    log.check(type(a)==float, 'this is a check')
+
+    log.check_eq(type(a), float)
     log.check(a == b, 'this is log check')
-    log.check_eq(a, b, 'this is log check_eq')
+    log.check_eq(type(a), float, "this's lg check_eq")
     log.check_ne(a+1, b, 'this is log check_ne')
     log.check_ge(a, b, 'this is log check_ge')
     log.check_le(a+2, b, 'this is log check_le')

@@ -224,14 +224,14 @@ log = Logger()
 
 if __name__ == '__main__':
     log.info('this is log info')
-    log.warning('this is log info')
-    log.error('this is log info')
-    # log.fatal('this is log info')
+    log.warning('this is log warning')
+    log.error('this is log error')
+    # log.fatal('this is log fatal')
 
     a = 1; b = 2
     log.check(type(a)==float)
 
-    log.check(type(a)==float, "this's ts")
+    log.check(type(a)==float, "this's check")
     log.check(type(a)==float, 'this is a check')
 
     log.check_eq(type(a), float)

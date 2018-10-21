@@ -30,12 +30,14 @@ Example use
     log.set_level("INFO")  # Integer levels are also allowed.
     # by default, log is set to "INFO".
     log.info("It works.")
-    log.warn("Something not ideal")
+    log.warning("Something not ideal")
     log.error("Something went wrong")
     log.fatal("AAAAAAAAAAAAAAA!")
     
     # Glog-like check function
     check(condition)
+    a = 1
+    check(type(a), float)
     check_eq(obj1, obj2)
     check_ne(obj1, obj2)
     check_le(obj1, obj2)

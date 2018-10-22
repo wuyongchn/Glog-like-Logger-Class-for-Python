@@ -130,44 +130,28 @@ class Logger(object):
             raise
 
     @staticmethod
-    def _get_args(string, tag):
-        def _delete_pre_and_last_blank(_arg):
-            while _arg[0] == ' ':
-                _arg = _arg[1:]
-            while _arg[-1] == ' ':
-                _arg = _arg[:-1]
-            return _arg
-
-        start_idx = string.find('(')
-        if tag is None:
-            end_idx = string.rfind(')')
-        else:
-            end_idx = string.rfind(',', 0, string.find(tag))
-        arg = string[start_idx+1:end_idx]
-        comma_idx = arg.find(',')
-        if comma_idx == -1:
-            arg = _delete_pre_and_last_blank(arg)
-        else:
-            arg1 = _delete_pre_and_last_blank(arg[:comma_idx])
-            arg2 = _delete_pre_and_last_blank(arg[comma_idx+1:])
-            arg = (arg1, arg2)
-        return arg
+    def _get_arg(string, start_idx):
+        is_ignore = False
+        pre_brackets = 0
+        arg = ''
+        for i in range(start_idx, len(string)):
+            if string[i] == '\'' or string[i] == '"':
+                is_ignore = False if is_ignore else True
+            elif string[i] == '(':
+                pre_brackets += 1
+            elif string[i] == ')':
+                if pre_brackets == 0:
+                    return arg, i
+                else:
+                    pre_brackets -= 1
+            elif string[i] == ',' and not is_ignore:
+                return arg, i
+            arg += string[i]
 
     def _check_failed(self, msg):
         stack = traceback.extract_stack()
         stack = stack[0:-2]
         filename, lineno, _, args = stack[-1]
-        arg = self._get_args(args, msg[-1])
-        if isinstance(arg, str):
-            if msg[-1] is None:
-                msg = msg[0] + arg
-            else:
-                msg = msg[0] + arg + ' ' + msg[1]
-        else:
-            if msg[-1] is None:
-                msg = msg[0] + arg[0] + msg[1] + arg[1] + msg[2]
-            else:
-                msg = msg[0] + arg[0] + msg[1] + arg[1] + msg[2] + msg[3]
 
         try:
             raise self.FailedCheckException(msg)
@@ -180,43 +164,77 @@ class Logger(object):
     def check(self, condition, msg=None):
         """Raise exception with message if condition is false."""
         if not condition:
-            msg = ('Check failed: ', msg)
+            stack = traceback.extract_stack()
+            _, _, _, args = stack[-2]
+            arg, _ = self._get_arg(args, args.find('(')+1)
+            msg = msg if msg is not None else ''
+            msg = 'Check failed: ' + arg + ' ' + msg
             self._check_failed(msg)
 
     def check_eq(self, obj1, obj2, msg=None):
         """Raise exception with message if object1 != object2."""
         if obj1 != obj2:
-            msg = ('Check failed: ', ' == ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ', msg)
+            stack = traceback.extract_stack()
+            _, _, _, args = stack[-2]
+            arg1, idx = self._get_arg(args, args.find('(')+1)
+            arg2, _ = self._get_arg(args, idx+1)
+            msg = msg if msg is not None else ''
+            msg = 'Check failed: ' + arg1 + ' == ' + arg2 + ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ' + msg
             self._check_failed(msg)
 
     def check_ne(self, obj1, obj2, msg=None):
         """Raise exception with message if obj1 == obj2."""
         if obj1 == obj2:
-            msg = ('Check failed: ', ' != ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ', msg)
+            stack = traceback.extract_stack()
+            _, _, _, args = stack[-2]
+            arg1, idx = self._get_arg(args, args.find('(') + 1)
+            arg2, _ = self._get_arg(args, idx + 1)
+            msg = msg if msg is not None else ''
+            msg = 'Check failed: ' + arg1 + ' != ' + arg2 + ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ' + msg
             self._check_failed(msg)
 
     def check_le(self, obj1, obj2, msg=None):
         """Raise exception with message if not (obj1 <= obj2.)"""
         if obj1 > obj2:
-            msg = ('Check failed: ', ' <= ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ', msg)
+            stack = traceback.extract_stack()
+            _, _, _, args = stack[-2]
+            arg1, idx = self._get_arg(args, args.find('(') + 1)
+            arg2, _ = self._get_arg(args, idx + 1)
+            msg = msg if msg is not None else ''
+            msg = 'Check failed: ' + arg1 + ' <= ' + arg2 + ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ' + msg
             self._check_failed(msg)
 
     def check_ge(self, obj1, obj2, msg=None):
         """Raise exception with message if not (obj1 >= obj2.)"""
         if obj1 < obj2:
-            msg = ('Check failed: ', ' >= ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ', msg)
+            stack = traceback.extract_stack()
+            _, _, _, args = stack[-2]
+            arg1, idx = self._get_arg(args, args.find('(') + 1)
+            arg2, _ = self._get_arg(args, idx + 1)
+            msg = msg if msg is not None else ''
+            msg = 'Check failed: ' + arg1 + ' >= ' + arg2 + ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ' + msg
             self._check_failed(msg)
 
     def check_lt(self, obj1, obj2, msg=None):
         """Raise exception with message if not (obj1 < obj2.)"""
         if obj1 >= obj2:
-            msg = ('Check failed: ', ' < ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ', msg)
+            stack = traceback.extract_stack()
+            _, _, _, args = stack[-2]
+            arg1, idx = self._get_arg(args, args.find('(') + 1)
+            arg2, _ = self._get_arg(args, idx + 1)
+            msg = msg if msg is not None else ''
+            msg = 'Check failed: ' + arg1 + ' < ' + arg2 + ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ' + msg
             self._check_failed(msg)
 
     def check_gt(self, obj1, obj2, msg=None):
         """Raise exception with message if not (obj1 > obj2.)"""
         if obj1 <= obj2:
-            msg = ('Check failed: ', ' > ', ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ', msg)
+            stack = traceback.extract_stack()
+            _, _, _, args = stack[-2]
+            arg1, idx = self._get_arg(args, args.find('(') + 1)
+            arg2, _ = self._get_arg(args, idx + 1)
+            msg = msg if msg is not None else ''
+            msg = 'Check failed: ' + arg1 + ' >= ' + arg2 + ' (' + str(obj1) + ' vs. ' + str(obj2) + ') ' + msg
             self._check_failed(msg)
 
 
@@ -224,21 +242,24 @@ log = Logger()
 
 if __name__ == '__main__':
     log.info('this is log info')
-    log.warning('this is log warning')
-    log.error('this is log error')
-    # log.fatal('this is log fatal')
+    log.warning('this is log info')
+    log.error('this is log info')
+    # log.fatal('this is log info')
+    log.debug('this is log debug')
 
     a = 1; b = 2
-    log.check(type(a)==float)
+    # log.check(type(a)==float)
 
-    log.check(type(a)==float, "this's check")
-    log.check(type(a)==float, 'this is a check')
+    # log.check(type(a)==float, "this's type check")
+    # log.check(type(a)==float, 'this is a check')
 
-    log.check_eq(type(a), float)
-    log.check(a == b, 'this is log check')
-    log.check_eq(type(a), float, "this's lg check_eq")
+    # log.check_eq(type(a), float)
+    log.check('a,b' == 'b', '%s this is log check' % 'dd')
+    log.check_eq("aa,c", "bb,c")
+    log.check_eq(type(a), float, "this's log check_eq")
     log.check_ne(a+1, b, 'this is log check_ne')
     log.check_ge(a, b, 'this is log check_ge')
     log.check_le(a+2, b, 'this is log check_le')
     log.check_gt(a, b, 'this is log check_gt')
     log.check_lt(a+1, b, 'this is log check_lt')
+
